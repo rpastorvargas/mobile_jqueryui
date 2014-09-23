@@ -33,6 +33,7 @@ function Session(host,port,userName,experimentName,slotTime,
 		this.onCloseCallback = [onCloseCallback];
 		this.onErrorCallback = [onErrorCallback];
 		try {
+			alert("Opening web socket..");
 	    	this._ws = new WebSocket("ws://" + host + ":" + port +"/");
 	    	this._ws.onopen = this._onopen;
         	this._ws.onmessage = this._onmessage;
@@ -65,10 +66,11 @@ function Session(host,port,userName,experimentName,slotTime,
 	Session.prototype._onopen = function(){          
         if (this.readyState == 0){
 			// CONNECTING
-			// alert("Connecting");
+			alert("Connecting");
 			this.websocket_openned = false;
 			this.session.openned = false;
 		} else if (this.readyState == 1){
+			alert("Connected..");
 			// Open the sesion (connection using Websocket!!!
 			rlab_openSession(this.session);
 			// Start alive timing
