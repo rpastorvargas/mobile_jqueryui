@@ -1,0 +1,40 @@
+#panelPrincipalOculto {
+	display: none;
+	visibility: hidden;
+}
+
+#footerSlideContainer {
+	position: fixed;
+	bottom:0;
+	width: 100%;
+}
+#footerSlideButton {
+	background:url(../img/InfoLab.png) top left no-repeat transparent;
+	position: absolute;
+	top: -55px;
+	right: 20px;
+	width:50px;
+	height:50px;
+	border: none;
+	cursor: pointer;
+	opacity:0.6;
+}
+#footerSlideContent {
+	width: 100%;
+	height: 0px;
+	background: #DDD;
+	color: #000;
+	font-size: 1em;
+	border: none;
+	font-family: DejaVuSansBook, Sans-Serif;
+}
+#footerSlideText {
+	padding: 15px 10px 25px 25px;
+}
+
+.encabezado {
+	text-align: center;	
+}
+
+
+

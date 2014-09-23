@@ -1,0 +1,283 @@
+<!doctype html>
+<html>
+<head>
+
+<!--META-->
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Integraci&oacute;n con laboratorios remotos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!--STYLESHEETS-->
+<link rel="stylesheet" href="jquery.mobile-1.4.2/jquery.mobile-1.4.2.min.css" />
+<link href="css/login_page.css" rel="stylesheet" type="text/css" />
+
+
+
+
+</head>
+<body>
+<!--MOBILE PAGE-->
+<div data-role="page" id="login" data-title="ReLaTeD Login">
+
+<div data-role="header" data-position="fixed">
+		<h1>ReLaTeD Login</h1>
+         <img src="img/related.png" class="ui-btn-left" style="width: 40px; height: 40px;" />
+         <img src="img/android_logo.png"  onClick="getCurrentLab()" class="ui-btn-right" style="width: 40px; height: 40px;" />
+               
+</div> <!--header-->
+
+
+<div data-role="content">	
+	
+<!--LOGIN FORM-->
+<form name="login-form" class="login-form" action="" method="post">
+
+
+    <!--TITLE-->
+    <div class="encabezado">
+    <h2 id="login_header">Login</h2><!--END TITLE-->
+    <h3 id="login_header2">Experiment</h3><!--END SUBTITLE-->
+    	<div class="encabezado3">
+   		 <!--DESCRIPTION--><span>Enter with your ReLaTeD Credentials</span><br><!--END DESCRIPTION-->
+   		 </div>
+    </div>
+
+	
+	<div class="ui-grid-b"><br>
+	<div class="ui-block-a"></div>
+	<div class="ui-block-b"><!--USERNAME--><input name="username" id="username" type="text" class="input_username" value="Username" onfocus="this.value=''" /><!--END USERNAME--></div>
+	<div class="ui-block-c"></div>
+</div><!-- /grid-b -->
+
+	<div class="ui-grid-b">
+	<div class="ui-block-a"></div>
+	<div class="ui-block-b"><!--PASSWORD--><input name="password" id="password" type="password" class="input_password" value="Password" onfocus="this.value=''" /><!--END PASSWORD--></div>
+	<div class="ui-block-c"></div>
+</div><!-- /grid-b -->
+
+	<div class="ui-grid-b">
+	<div class="ui-block-a"></div>
+	<div class="ui-block-b">
+		<div class="button_login"><br>
+			<input type="submit" id="login_button" name="submit" value="Login" onClick="login();return false;" class="button" />
+     </div>
+	</div>
+	<div class="ui-block-c"></div>
+</div><!-- /grid-b -->
+
+ 
+
+    </form>
+<!--END LOGIN FORM-->
+
+
+
+<div id="dvLoading"></div>
+</div>   
+<!--END CONTENT-->
+
+<div data-role="footer" data-position="fixed" align="center">
+<!--MESSAGE ERROR-->
+<div id="msg_error"></div>
+</div>
+
+<!--END MOBILE PAGE-->
+</div>
+
+<!--SCRIPTS-->
+<script src="js/jquery-1.11.0.js"></script>
+<script src="jquery.mobile-1.4.2/jquery.mobile-1.4.2.js"></script>
+<!-- SOAP service javascript library -->
+<script type='text/javascript' src='js/jquery.soap.js'></script>
+<script type='text/javascript' src='js/jquery.xml2json.js'></script>
+<script type="text/javascript" src='js/jquery.base64.js'></script>
+<script type="text/javascript" src="js/rlab_services_hash.js"></script>
+<script type="text/javascript" src="js/rlab_services_users.js"></script>
+<script type="text/javascript" src="js/rlab_services_systems.js"></script>
+<script type="text/javascript" src="js/rlab_services_watchdogsignal.js"></script>
+<script type="text/javascript" src="js/rlab_services_sessions.js"></script>
+<script type="text/javascript" src="js/utils.js"></script>
+<!-- Lab and experiment config data -->
+<script type="text/javascript" src="conf/lab_config.js"></script>
+
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+	
+	$('#dvLoading').fadeOut(0);
+	$('#login_button').attr("disabled","disabled");
+	
+	$(".username").focus(function() {
+		$(".user-icon").css("left","-48px");
+	});
+	$(".username").blur(function() {
+		$(".user-icon").css("left","0px");
+	});
+	
+	$(".password").focus(function() {
+		$(".pass-icon").css("left","-48px");
+	});
+	$(".password").blur(function() {
+		$(".pass-icon").css("left","0px");
+	});
+	
+	// Read data from lab_conf variable defined in config file
+	if (laboratory_config.lab_id!=null && laboratory_config.lab_experiment_id!=null){
+		initLoading('Getting lab info');
+		lab_data = getSystemInfo(laboratory_config.lab_id);
+		stopLoading('Lab info loaded');
+		if (lab_data != null){
+			// Add dynamic data to Object defining the Lab
+			laboratory_config.lab_ip = lab_data.IP;
+			laboratory_config.lab_port = lab_data.rest_port;
+			// Find the slot time
+			var experiment_info = getExperimentInfo(laboratory_config.lab_id,laboratory_config.lab_experiment_id);
+			laboratory_config.lab_slot_time = experiment_info.slot_time;
+			// User will be filled one the login is ok
+			laboratory_config.lab_name = lab_data.name;
+			// Set the name of experiment
+			laboratory_config.lab_experiment_name = experiment_info.experiment_name;
+		}
+	}
+	$("#login_header").html("Login to '" + laboratory_config.lab_name + "' lab");
+	$("#login_header2").html("Experiment: " + laboratory_config.lab_experiment_name);
+	
+	$("#labName").html(laboratory_config.lab_name);
+	
+	// Check is if Alive
+	initLoading('Lab is alive?...');
+	var ready = isAlive(laboratory_config.lab_id);
+	if (ready){
+		stopLoading('Lab ready');
+	} else {
+		stopLoading('Lab seems not to be ready');
+	}
+	if (ready){
+		// Check for session openned!!! (user is working on it)
+		initLoading('Lab is being used?...');
+		sessions = getOpenSessionsForSystem(laboratory_config.lab_id);
+		if (sessions !=null){
+			stopLoading('Lab seems now is being used');
+		} else {
+			$('#login_button').removeAttr("disabled");
+			stopLoading('Press the Login button to enter on lab');
+		}
+	}
+	
+});
+</script>
+
+<script>
+	
+	function open_experiment(){
+		var params = {  lab_id:laboratory_config.lab_id,
+						lab_experiment: encodeURIComponent(laboratory_config.lab_experiment_id),
+						lab_username:encodeURIComponent(laboratory_config.lab_username),
+						lab_slot_time:laboratory_config.lab_slot_time };
+		var query_string = $.param( params );
+		window.location = "experiment.html?"+query_string;
+	}
+	
+	function login(){
+		
+		// Clear error message
+		$('#msg_error').html("");
+		// Get the hash password form WS service
+		var p = $('#password').val();
+		initLoading('Connecting to encrypt password service');
+		var hP = getHashedPassword(p);
+		stopLoading('ok');
+		if (hP!=null){
+			var u = $('#username').val();
+			// Call the websrvice !!!
+			initLoading('Cheking credentials...');
+			var info = checkUserByLogin(u,hP);
+			stopLoading('Credentials checked');
+			if (info.ok){
+				// set username
+				laboratory_config.lab_username = u;
+				open_experiment();
+			} else {
+				// Show error !!!!
+				$('#msg_error').html(info.msg);
+			}
+		}	
+	}
+	
+	function initLoading(msg){
+		$('#msg_error').html(msg);
+		$('#dvLoading').fadeIn(10);
+	}
+	
+	function stopLoading(msg){
+		$('#msg_error').html(msg);
+		$('#dvLoading').fadeOut(10);
+	}
+	
+		function ScaleContentToDevice() {
+    scroll(0, 0);
+    var headerHeight = $("#jqmHeader:visible").outerHeight();
+    var footerHeight = $("#jqmFooter:visible").outerHeight();
+    var viewportHeight = $(window).height();
+       
+    var content = $("#jqmContent:visible");
+    var contentMargins =  content.outerHeight() - content.height();
+    
+    var contentheight = viewportHeight - headerHeight - footerHeight - contentMargins;
+    
+    content.height(contentheight);
+	//alert(contentheight);
+};
+
+$(document).on("pageshow", function(){
+    ScaleContentToDevice();
+});
+
+$(document).on("click", function(){
+	ScaleContentToDevice();
+});
+
+
+
+function showAndroidMenu(){
+ $('#android').popup('open');
+}
+
+function showAPPs(){
+}
+
+function getCurrentLab(){
+		
+	var dataSend = {lab:laboratory_config.lab_name};
+	var url = laboratory_config.phonegapWS_url;
+	 initLoading('Creating android application...');
+	 $.ajax({
+                data:  dataSend,
+                url:   url,
+                type:  'post',
+                beforeSend: function () {
+                        $("#resultado").html("Procesando, espere por favor...");
+                },
+				error: function() {
+					//alert("Error, lab seems not exists in Adobe Phonegap Build");
+					stopLoading('Error, lab seems not exists in Adobe Phonegap Build');
+				},
+                success:  function (response) {
+						var url = JSON.parse(response).location;
+						// Popup blocked !!!
+						// window.open(url);
+						stopLoading('Download: ' + url);
+						downloadURI(url,dataSend);
+                        //var urlSucia = response.split("\"");
+						//var urlEnlaceAPK = urlSucia[3];
+						//window.open(urlEnlaceAPK);
+						
+                }
+        });
+}
+	
+</script>
+
+</body>
+</html>

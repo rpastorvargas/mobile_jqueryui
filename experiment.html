@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Web Experiment Client for RELATED labs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Web Experiment Client for RELATED labs">
+  <meta name="author" content="Rafael Pastor Vargas">
+
+<!--STYLESHEETS-->
+<link rel="stylesheet" href="jquery.mobile-1.4.2/jquery.mobile-1.4.2.min.css" />
+<link rel="stylesheet" type="text/css" href="css/experimentClient.css">
+
+	<script>
+	function sendDataToExperiment(rlab_vars){
+		if (rlab_vars != null){
+			l = rlab_vars.length;
+			for (i=0; i<l; i++){
+				var returned = setVarByName(lab,rlab_vars[i],rlab_vars[i].moduleName);
+			}
+		}
+	}
+	
+	</script>
+    
+     
+
+</head>
+
+<body>
+<!--MOBILE PAGE-->
+<div data-role="page" id="ExperimentClient" data-title="Web Experiment Client for RELATED labs">
+<div data-role="header" data-position="fixed">
+				<h2>Lab: <span id="lab_name_div">Lab name</span><br/></h2>
+				<!--<h1>Web Experiment Client</h1>-->
+                <img src="img/related.png" class="ui-btn-left" style="width: 40px; height: 40px;" />
+                <button type="button" id="startstopBtn" onClick="startstopBtnOnclick();return false;" class="ui-btn-right ui-btn ui-btn-inline ui-icon-action ui-btn-icon-right">Start</button>
+              
+</div> <!--header-->
+
+<div data-role="content">	
+        
+  <div data-role="navbar" id="barraNavegacion" data-iconpos="right" data-position="fixed">
+    <ul>
+      <li><a id="graphs" href="#graphsPopup" data-rel="popup">Graphs <span class="ui-li-count" id="graphs_menu_icon_number" ></span></a></li>
+      <li><a id="variables" href="#variablesPopup" data-rel="popup">Vars <span class="ui-li-count" id="vars_menu_icon_number"></span></a></li>  
+      <li><a id="webviews" href="#webviewsPopup" data-rel="popup">Views <span class="ui-li-count" id="views_menu_icon_number"></span></a></li>
+    </ul>
+  </div>
+  
+    <div id="graphsPopup" data-role="popup" data-transition="slide" data-position-to="window" data-inset="true" data-overlay-theme="a"></div>
+
+     
+   <div id="variablesPopup" data-role="popup" data-transition="slide" data-position-to="window" data-overlay-theme="a"></div>
+        
+     <div id="webviewsPopup" data-role="popup" data-transition="slide" data-position-to="window" data-inset="true" data-overlay-theme="a"></div>
+
+<div id="objects_container_views"></div>
+
+<div id="objects_container"></div>
+
+<div id="footerSlideContainer">
+	<div id="footerSlideButton"></div>
+	<div id="footerSlideContent">
+		<div id="footerSlideText">
+	<h2>Session Info</h2>
+    <span>Connected as: <span id="username_div"></span></span><br>
+	<span>Elapsed time: <span id="elapsed_time_div" >00:00:00</span></span><br/>
+    <span>Remaining time for session: <span id="session_remaining_datetime" class="label label-success">0 minutes</span></span><br/>
+    <span>Sesion start at: <span id="session_start_datetime">Lunes, 2 de diciembre de 1971; 0:00:00</span></span><br/>
+    <span>Sesion stops at: <span id="session_stop_datetime">Lunes, 2 de diciembre de 1971; 0:10:00</span></span>
+		</div>
+	</div>
+<!--END CONTENT-->
+
+<!--END MOBILE PAGE-->
+</div>
+
+    <script src="js/jquery-1.11.0.js"></script>
+    <script src="jquery.mobile-1.4.2/jquery.mobile-1.4.2.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/scripts.js"></script>
+    
+    <!-- SOAP service javascript library -->
+	<script type='text/javascript' src='js/jquery.soap.js'></script>
+	<script type="text/javascript" src='js/jquery.base64.js'></script>
+	<script type="text/javascript" src='js/jquery.xml2json.js'></script>
+    
+    <script src="js/highcharts.js"></script>
+    <script src="js/exporting.js"></script>
+
+    
+    <script src="js/rlab_websocket.js" type="text/javascript"></script>
+    <script src="js/rlab_library.js" type="text/javascript"></script>
+    <script src="js/rlab_editors.js" type="text/javascript"></script>
+    <script src="js/rlab_services_systems.js" type="text/javascript"></script>
+    <script src="js/rlab_services_sessions.js" type="text/javascript"></script>
+    <script src="js/utils.js" type="text/javascript"></script>
+
+    
+<script type="text/javascript">
+
+
+	//var host = "192.168.2.101"; //"62.204.199.218";
+	var host = "62.204.199.219"; //"62.204.199.218";
+	var port = 9999; //9001;		
+	var id = "55B25E0EF789AB7FB0835B570670F636"; //"32D05B1F3681B5C8424001467B8649CD";
+	var username = "debug";
+	var experiment_id = "DPFUHGFUNBPTKNVPUOJKZG=="; //"Ball position";
+	var experiment_name = "Simple experiment";
+	var experiment_time = 0;
+	var slot_time = 20;
+	
+	// Defines if the experiment is running
+	var running = false;
+	
+	// Objects for control lab
+	var lab = null; // new Lab(host,port,id);
+	// Test if REST service if alive !!!
+	var lab_name = null; // getLabName(lab);
+	// Experiment vars and params
+	var experiment_vars = null;
+	var experiment_params = null;
+	// Local  modules
+	var local_modules = null;
+	// Remote modules
+	var remote_modules = null;
+	var remote_systems = null;
+	
+	// Web views
+	// Urls array indicating the view
+	var web_views = null;
+	var onReceiveDataViewHandlers = [];
+	var views_iframes = [];
+	
+	
+	// graphs
+	// Array with items including:
+	// chart, names associated to char, module and system
+	var charts = new Array();
+	var interactives_vars_containers = new Array();
+	
+	//Array de posibles elementos a mostrar en el panel principal
+	var elements = new Array();
+	
+	//options for graphs
+	var max_seconds_graphs = 20;
+	var smooth_lines = false; 
+	
+	// Last tab index selected
+	// First by default
+	var graph_tab_index = 0;
+	// Wait for openned connection
+	
+	
+	var sessions_openned = null;
+	
+	// Used for left options to cange to div
+	var showingContainer = 'session_info_content';
+	// Register the unload event to close the session
+	window.onbeforeunload = onExit;
+	
+	// Session timer
+	var session_start_time;
+	var session_stop_time;
+	var timerSessionId;
+	var timerSessionInterval = 1000;
+		
+	function onExit(){
+		rlab_closeSession(session);
+	}
+	
+	$(document).ready(function() {
+
+		var open = false;
+	$('#footerSlideButton').click(function() {
+		if(open === false) {
+			$('#footerSlideContent').animate({ height: '200px' });
+			$(this).css('backgroundPosition', 'bottom left');
+			open = true;
+		} else {
+			$('#footerSlideContent').animate({ height: '0px' });
+			$(this).css('backgroundPosition', 'top left');
+			open = false;
+		}
+	});		
+
+
+		//Creamos los popup del showContainer() para evitar errores
+		$('#graphsPopup').popup({
+			create: function( event, ui ) {}
+		});
+		$('#webviewsPopup').popup({
+			create: function( event, ui ) {}
+		});
+
+
+		$('#dvLoading').removeClass('hide');
+			
+		// Read expected parameters
+		// host = getParameter("lab_ip");
+		
+		id = getParameter("lab_id");
+		
+		// port And Id is got from Lab data
+		// port = getParameter("lab_port");		
+		var lab_info = getSystemInfo(id);
+		if (lab_info!=null){
+			port = lab_info.rest_port;
+			host = lab_info.IP;
+			
+			username = getParameter("lab_username");
+			experimentURIComponent = getParameter("experiment_id"); 
+			// Decode !!!
+			experiment_id = decodeURIComponent(experimentURIComponent);
+			slot_time = getParameter("lab_slot_time");
+			
+			// Objects for control lab
+			lab = new Lab(host,port,id);
+			
+			// Test if REST service if alive !!!
+			lab_name = getLabName(lab);
+			var experimentOk = false;
+			if (typeof lab_name === "undefined"){
+				lab_name = null;
+			} else {
+				// And check for experiment id !!!
+				var experiment_info = getExperimentInfo(lab.id,experiment_id);
+				if (experiment_info != null){
+					experiment_name = experiment_info.experiment_name;
+					// Get experiment time
+					experiment_time = getExperimentTime(lab,experiment_name);
+					experimentOk = true;
+					
+				}
+			}
+			// Check is being used !!!
+			sessions_openned = getOpenSessionsForSystem(id);
+		}
+		 
+		
+				
+		if ((lab_name != null) & (experimentOk) & (sessions_openned==null)){
+			
+			// Store vars
+			experiment_vars = getVarsFromExperiment(lab,experiment_name);
+			// Store params
+			experiment_params = getParams(lab);
+			// Store local modules names
+			local_modules = getLocalModulesNames(lab,experiment_name);
+			// Store remote modules names and system (REST service!!!)
+			remote_modules = getRemoteModulesNames(lab,experiment_name);
+			remote_systems = getRemoteModulesSystemsNames(lab,experiment_name);
+			
+			// Fill the information about experiment
+			buildGeneralInformationUI();
+			
+			buildMainContent(slot_time);
+			
+			// Build charts interface
+			createCharts(lab,experiment_name);
+			
+			
+			
+			rellenarPopupGraphs (lab,experiment_name);
+			
+			
+			// Build interactives interface
+			buildInteractives(lab,experiment_name,local_modules,remote_modules,remote_systems);
+			
+			// Build views
+			urls = getWebViewsUrlsFromExperiment(lab,experiment_name);
+			
+			
+			
+			
+			
+			
+			if (urls!=null && $.isArray(urls)){
+				web_views = urls;
+				var web_views_names = getWebViewsFromExperiment(lab,experiment_name);
+				var web_views_descriptions = getWebViewsDescriptionsFromExperiment(lab,experiment_name);
+				
+				rellenarPopupWebviews (web_views,web_views_names,web_views_descriptions)
+				
+				buildViews(web_views, web_views_names, web_views_descriptions);
+			}
+			
+			//Tras generar graphs y views ocultamos todo y mostramos la priemra graph por defecto
+			ocultarPanelPrincipal();
+			//Mostramos el primer gráfico por defecto
+			$("#objects_container").children().first().show();
+			//Y llamamos a showContainer por si ddirectamente se da a START comience el gráfico
+			showContainer($("#objects_container").children().first().attr('id'));
+			
+			
+			// Get the session and start a session
+			var session = getSession(host,port,username,experiment_name,slot_time,
+							  onDataReceived,onOpenCallback,
+							  onCloseCallback,onErrorCallback);
+			
+			// Start timer function for session
+			timerSessionId = setInterval(sessionTimerControl, timerSessionInterval);
+
+		} else {
+			buildMainContent(0);
+			if (sessions_openned!=null){
+				$("#error_div").html("The lab is being used now.<br/><br/>Try later...");
+			} else {
+				$("#error_div").html("Wrong lab connection parameters !!!.");
+			}
+		} 
+        // Remove class loading
+		$('#dvLoading').addClass('hide');
+		$("#graphs_menu_icon").removeClass('fa-spin');
+		$("#vars_menu_icon").removeClass('fa-spin');
+		$("#views_menu_icon").removeClass('fa-spin');
+		
+    });
+ 
+ 	function buildGeneralInformationUI(){
+		$('#lab_name_div').html( lab_name );
+		$('#experiment_name_div').html( experiment_name );
+		$('#username_div').html( username );
+ 	}
+ 	
+	function buildViews(web_views_url,web_views_names,web_views_descriptions){
+		var entries_number = 0;
+ 		if (web_views_url!=null){
+			var l = web_views_url.length;
+			for (i=0; i<l; i++){
+				var container_name = "view"+i;
+				var ul_ref = $("#views_links_container");
+				var li_ref = "<li><a href='#' onclick=\"showContainer('" + container_name + "'); return false;\"> <i class='fa fa-share'></i> " + 
+								web_views_names[i] + "</a></li>";
+				ul_ref.append(li_ref);
+				// Add a divider to the links
+				if (i<l-1){
+					divider = "<li class='divider'></li>";
+				}
+
+				
+				var html_element = '<div id="' + container_name + '">';
+			
+				html_element += "<h4>" +web_views_descriptions[i]+ "</h4>";
+			
+				html_element += '<div class="iframe_general_style" id="iframe-' + container_name + '"></div>';
+				html_element += '</div>'; // End of panel-primary
+				
+				$('#objects_container_views').append(html_element);
+				
+				
+		
+				$( "#iframe-"+container_name ).html('<iframe width="100%" height="100%" src="' + 
+					web_views_url[i] + '" id="' + (container_name+"_iframe") + 
+					'" onload="configureFrame(this.id)" seamless sandbox="allow-same-origin allow-scripts allow-top-navigation"></iframe>');
+			}
+			entries_number = l;
+		} 
+		$("#views_menu_icon").removeClass('fa-spin');
+		$("#views_menu_icon_number").html(entries_number);
+	}
+	
+ 	
+	function configureFrame(id) {
+		var ifrm = document.getElementById(id);
+		
+		var doc = ifrm.contentDocument? ifrm.contentDocument: 
+			ifrm.contentWindow.document;
+		ifrm.style.visibility = 'hidden';
+		ifrm.style.height = "10px"; // reset to minimal height ...
+		// IE opt. for bing/msn needs a bit added or scrollbar appears
+		ifrm.style.height = getDocHeight( doc ) + 15 + "px";
+		ifrm.style.visibility = 'visible';
+		// add to array of views iframes
+		views_iframes.push(ifrm);
+		
+	}
+
+	function getDocHeight(doc) {
+		doc = doc || document;
+		var body = doc.body, html = doc.documentElement;
+		var height = Math.max( body.scrollHeight, body.offsetHeight, 
+			html.clientHeight, html.scrollHeight, html.offsetHeight );
+		return height;
+	}
+
+	function createCharts(lab,experiment){
+		// Configure chart
+		// returns an array with items having the next structure
+		// module --> module name
+		// system --> system name (local if not remote module are included)
+		// names --> Array with variables names
+		// colors --> Array with colors values (RGB: #XXXXXX)
+		var graphs_info = getGraphsInfo(lab,experiment);
+		if (typeof graphs_info === "undefined"){
+			graphs_info = null;
+		}
+		if (graphs_info != null){
+		
+			for (var i = 0; i<graphs_info.length; i++){
+				var container_name = "chart" + i;
+				// Add the link in nav tab
+				var ul_ref = $("#graphs_links_container");
+				var tab_title = createGraphTitle((graphs_info[i])['names']);
+				var li_ref = "<li><a href='#' onclick=\"showContainer('" + container_name + "'); return false;\"> " + 
+								tab_title + "</a></li>";
+				ul_ref.append(li_ref);
+				
+				// Add a divider to the links
+				if (i<graphs_info.length-1){
+					divider = "<li class='divider'></li>";
+				}
+				
+				var html_element = '<div id="' + container_name + '">';
+				html_element += tab_title;
+				html_element += '<h3><div id="' + container_name + '" ></div></h3>';
+				html_element += '</div>'; // End of panel-primary
+				
+				$('#objects_container').append(html_element);
+
+				// Add chart
+				chart = createChart(container_name,graphs_info[i],smooth_lines);
+
+				chart_info = new Array();
+				chart_info['chart'] = chart;
+				chart_info['names'] = (graphs_info[i])['names'];
+				chart_info['module'] = (graphs_info[i])['module'];
+				chart_info['system'] = (graphs_info[i])['system'];
+				/*chart_info['container'] = "panel-" + container_name;*/
+				chart_info['container'] = container_name;
+				charts.push(chart_info);
+				
+			}
+			$("#graphs_menu_icon").removeClass('fa-spin');
+			$("#graphs_menu_icon_number").html(graphs_info.length);
+		} 
+		
+		
+	}
+	
+	function buildInteractives(lab,experiment_name,local_modules,remote_modules,remote_systems){
+		var localInteractives = false;
+		var remoteInteractives = false;
+		var entries_number = 0;
+		if (local_modules !=null){
+			for (i=0; i<local_modules.length; i++){
+				var module_name = local_modules[i];
+				var interactive_variables_module = 
+						getLocalInteractiveVariables(lab,experiment_name,module_name);
+				if (interactive_variables_module !=null){
+					createInteractiveVarsDiv(module_name,interactive_variables_module,false,null);
+					localInteractives = true;
+					entries_number ++;
+				}
+			}
+		}
+		
+		if (remote_modules !=null && remote_systems !=null){
+			for (i=0; i<remote_modules.length; i++){
+				var module_name = remote_modules[i];
+				var system_name = remote_systems[i];
+				var interactive_variables_module = 
+					getRemoteInteractiveVariables(lab,experiment_name,module_name,system_name);
+				if (interactive_variables_module !=null){
+					createInteractiveVarsDiv(module_name,interactive_variables_module,true,system_name);
+					remoteInteractives = true;
+					entries_number ++;
+				}
+			}
+		}
+		$("#vars_menu_icon").removeClass('fa-spin');
+		$("#vars_menu_icon_number").html(entries_number);
+	}
+	
+	function createInteractiveVarsDiv(module_name,interactive_variables_module,remote,system_name){
+		// Define inner container name 
+		var container_name = "interactives-" + module_name;
+		
+		// Create li entry
+		// Replace all blank spaces with -
+		container_name = container_name.replace(/ /g, "-");
+		// container_name = container_name.split(' ').join('-');
+		var ul_ref = $("#variables_links_container");
+		var li_ref = "<li><a href='#' onclick=\"showContainer('panel-" + container_name + "'); return false;\"> <i class='fa fa-share'></i> " + 
+								module_name + "</a></li>";
+		ul_ref.append(li_ref);
+		
+		
+		var html_element2 = '<div class="row clearfix"><div class="col-md-12 column">';
+		html_element2 += '<div id="panel-' + container_name + '" class="panel panel-primary hide">';
+		html_element2 += '<div class="panel-heading"><h3 class="panel-title">';
+		html_element2 += '<i class="fa fa-tasks"></i> Variables for module: ' + module_name;
+		if (remote){
+			html_element2 += " (Remote)";
+		}
+		html_element2 += '</h3></div>';
+		html_element2 += '<div class="panel-body">';
+		html_element2 += '<div id="' + container_name + '"></div>';
+		html_element2 += '</div>'; // End of panel body
+		html_element2 += '</div>'; // End of panel-primary
+		html_element2 += '</div></div>'; // End or row
+            	
+
+		$('#variablesPopup').append(html_element2);			
+		
+		// Fill the div with interactive vars
+		if (interactive_variables_module != null){
+			var div_tab = $("#"+container_name);
+			var div_tab2 = $("#"+container_name);
+			for (i=0; i<interactive_variables_module.length; i++){
+				var variable_name = interactive_variables_module[i];
+				if (!remote){
+					myVar = getVarByName(lab,variable_name,module_name);
+				} else {
+					myVar = getRemoteVarByName(variable_name,module_name,system_name);
+				}
+				
+				html_element2 = createEditor(myVar,interactives_vars_containers)
+			
+				div_tab2.append(html_element2);
+			}
+		}
+		$('#variablesPopup').append(div_tab2);
+	}
+	
+	function buildMainContent(work_session_time){
+		// In minutes
+		session_start_time = new Date();
+		$('#session_start_datetime').html(session_start_time.toLocaleString());
+		// Add session time to now
+		session_stop_time = new Date();
+		minutes = session_start_time.getMinutes() + work_session_time;
+		session_stop_time.setTime(session_start_time.getTime() + 60000*work_session_time);
+		$('#session_stop_datetime').html(session_stop_time.toLocaleString());
+		// Remaining time
+		$('#session_remaining_datetime').html(work_session_time + " minutes");
+	}
+	/*****************************************************************************************************
+	
+	CONTROL EXPERIMENT
+	
+	******************************************************************************************************/ 
+ 	function startExp(lab,experiment,username){
+		
+		var ok = initExperiment(lab, experiment);
+		if (ok==true){
+			setUserNameRunningExperiment(lab,experiment,username);
+			ok = startExperiment(lab,experiment);
+			if(ok==true){
+				resetChartsData();
+				invokeStartEventOnWebViews();
+				$("#startstopBtn").text("Stop");
+				$("#startstopBtn").css("color","#F00");
+				running = true;
+				$("#startstopBtn").removeClass('btn-success');
+				$("#startstopBtn").addClass('btn-danger');
+				$("#running_icon").removeClass('hide');
+			} else {
+				$("#error_div").text("Error starting experiment!!!");
+			}
+		} else {
+			$("#error_div").text("Error initiating experiment!!!");
+		}
+		
+	}
+	
+	function stopExp(lab,experiment){
+		var ok = stopExperiment(lab, experiment);
+		if (ok==true){
+			invokeStopEventOnWebViews();
+			$("#startstopBtn").text("Start");
+			$("#startstopBtn").css("color","#000");
+			running = false;
+			$("#startstopBtn").removeClass('btn-danger');
+			$("#startstopBtn").addClass('btn-success');
+			$("#running_icon").addClass('hide');
+		} else {
+			$("#error_div").text("Error stopping experiment!!!");
+		}
+		
+	}
+	
+	function startstopBtnOnclick(event){
+		// Depending on state, do start of stop function
+		if (running==true){
+			$('#dvLoading').removeClass('hide');
+			stopExp(lab,experiment_name);
+			$('#time_progress_bar_style').removeClass('progress-striped');
+			$('#dvLoading').addClass('hide');
+		} else {
+			$('#dvLoading').removeClass('hide');
+			startExp(lab,experiment_name,username);
+			$("#preload").hide();
+			// Change progress bar to stripped
+			$('#time_progress_bar_style').addClass('progress-striped');
+			$('#dvLoading').addClass('hide');
+		}
+	}
+	
+	/***********************************************************************************************************
+	
+		CALLBACKS FOR WEBSOCKET USING IN SESSION
+	
+	************************************************************************************************************/ 
+	// Callback function used to get data received!!!
+	function onDataReceived(data){
+		//$("#data").html(data);
+		//console.log(data);
+		
+		if (data.command=="data"){
+			var dataOnExp = data.data;
+			var time = dataOnExp.sealed_time;
+			time = time/1000;
+			formattedTime = formatSecondsAsTime(time,null);
+			$("#elapsed_time_div").html("<strong>" + formattedTime + "</strong>");
+			if (experiment_time != 0){
+				$('#time_progress_bar').width((time/experiment_time)*100 + "%");
+			} else {
+				ntime = time%60;
+				$('#time_progress_bar').width((ntime/60)*100 + "%");
+			}
+			// Add to graph
+			// Get the array of vars
+			var variables = dataOnExp.vars;
+			for (i=0; i<variables.length;i++){
+				single_var = variables[i];
+				for (j=0; j<charts.length; j++){
+					var names = (charts[j])['names'];
+					var var_name = single_var.name; 
+					var index = $.inArray(var_name, names);
+					if (index>=0){
+						var chart_to_add = (charts[j])['chart'];
+						updateData(chart_to_add,var_name, single_var.value, time);
+					}
+				}
+				// Update interactive panels
+				var id_to_find = "#interactive-var-" + single_var.name;
+				for (j=0; j<interactives_vars_containers.length; j++){
+					if (interactives_vars_containers[j] == id_to_find){
+						// $(id_to_find).html(single_var.name + ": " + single_var.value);
+						updateEditorValue(interactives_vars_containers[j],single_var);
+						break;
+					}
+				}
+			}
+			try {
+				// Redraw charts, only if page of graphs is showing !!!
+				for (j=0; j<charts.length; j++){
+					// Only redraw the visible
+					if (showingContainer == (charts[j])['container']){
+						var chart_to_redraw = (charts[j])['chart'];
+						chart_to_redraw.redraw();
+					}
+				}
+			} catch(err){
+				console.error(err.message);
+			}
+
+			// Update interactive panels
+			
+			// Views
+			if (variables.length>0){
+				// Call t
+				//var l = onReceiveDataViewHandlers.length;
+				var l = views_iframes.length;
+				for(j=0; j<l;j++){
+					try
+					{
+						views_iframes[j].contentWindow.onRLABReceiveData(variables);
+					}
+					catch (error)
+					{
+						console.log("Error in Function " + 
+							views_iframes[j].contentWindow.onRLABReceiveData + ": " + error);
+					}
+				}
+			}
+			// Check for final of experiment time
+			if (experiment_time>0){
+				if (time>=experiment_time){
+					startstopBtnOnclick(null);
+				}
+			}
+		}
+	}
+	
+	function onOpenCallback(readyState){
+		if (readyState == 1){
+			// Do the UI changes !!!
+			if (session.openned){
+				// Ready to start the experiment !!!
+				$("#startstopBtn").prop("disabled", false);
+				$("#messages").html("Ready to start experiment...");
+			}
+		} else {
+			$("#messages").html("Problem connecting with websockets.");
+		}
+	}
+	
+	function onCloseCallback(data){
+		$("#messages").html("Closed connection by lab: " + data.reason);	
+		closeExperimentWindow(data.reason);	
+	}
+	
+	function onErrorCallback(error){
+		$("#messages").html("Error with websockets: " + error);
+	}
+	
+	/*
+	*********************************************************************************
+	
+		EVENT FUNCTIONS FOR WEB VIEWS
+	*********************************************************************************
+	*/
+	function invokeStartEventOnWebViews(){
+		var l = views_iframes.length;
+		for(j=0; j<l;j++){
+			try
+			{
+				views_iframes[j].contentWindow.onRLABStartExperiment(experiment_vars,experiment_params);
+			}
+			catch (error)
+			{
+				console.log("Error calling start experiment event --> Function " + 
+				views_iframes[j].contentWindow.onRLABStartExperiment + ": " + error);
+			}
+		}
+	}
+
+	function invokeStopEventOnWebViews(){
+		var l = views_iframes.length;
+		for(j=0; j<l;j++){
+			try
+			{
+				views_iframes[j].contentWindow.onRLABStopExperiment(experiment_vars,experiment_params);
+			}
+			catch (error)
+			{
+				console.log("Error calling stop experiment event --> Function " + 
+				views_iframes[j].contentWindow.onRLABStopExperiment + ": " + error);
+			}
+		}
+	}
+
+	/*
+	*********************************************************************************
+	
+		UTILS
+	*********************************************************************************
+	*/
+	
+	function closeExperimentWindow(reason){
+		alert("Closed connection by lab: " + reason + ".\nNow the experiment window will be closed!!!");
+		// For web interface. REVISE FOR MOBILE !!!!
+		self.close();
+	}
+	
+	function formatSecondsAsTime(secs, format) {
+		var hr  = Math.floor(secs / 3600);
+		var min = Math.floor((secs - (hr * 3600))/60);
+		var sec = Math.floor(secs - (hr * 3600) -  (min * 60));
+ 
+		if (hr < 10)   { hr    = "0" + hr; }
+		if (min < 10) { min = "0" + min; }
+		if (sec < 10)  { sec  = "0" + sec; }
+		if (hr)            { hr   = "00"; }
+ 
+		if (format != null) {
+			var formatted_time = format.replace('hh', hr);
+			formatted_time = formatted_time.replace('h', hr*1+""); // check for single hour formatting
+			formatted_time = formatted_time.replace('mm', min);
+			formatted_time = formatted_time.replace('m', min*1+""); // check for single minute formatting
+			formatted_time = formatted_time.replace('ss', sec);
+			formatted_time = formatted_time.replace('s', sec*1+""); // check for single second formatting
+			return formatted_time;
+		} else {
+			return hr + ':' + min + ':' + sec;
+		}
+		
+	}
+	
+	function createGraphTitle(names){
+		var t = "No title";
+		if (names !=null){
+			t = "";
+			for (i=0; i<names.length; i++){
+				t += names[i];
+				if (i<names.length-1){
+					t+=",";
+				}
+			}
+		}
+		return t;
+	}
+	
+	function createChart(container_name, graph_info,smooth){
+		Highcharts.setOptions({
+            global: {
+                useUTC: false
+            }
+        });
+		if (smooth){
+			type_graph = 'spline';
+		} else {
+			type_graph = 'line';
+		}
+		
+		var title_graph = graph_info['names'];
+		chart = new Highcharts.Chart({
+            chart: {
+				type: type_graph,
+				renderTo: container_name,
+                //marginRight: 10,
+            },
+			reflow: false,
+            title: { text: title_graph },
+            xAxis: { title: { text: 'Time'}, type: 'linear' },
+            yAxis: {  title: { text: 'Values' } }, //, plotLines: createPlotLines(names,colors) },
+            exporting: {enabled: true}
+        });
+		createSeries(chart, graph_info['names'], graph_info['colors']);
+		
+		return chart;
+	}// End of createChart!!!
+		
+	function createSeries(chart, names, colors){
+		var n = names.length;
+		for (index = 0; index < n; ++index) {
+    		serie = { name: names[index], lineWidth: 1, color: colors[index], marker:{enabled: false}, data:[] };
+			// Argument 1: serie options
+			// Argument 2: redraw: Boolean
+			// Defaults to true. Whether to redraw the chart after the series is added. See the redraw()method below.
+			// Argument 3: animation: Mixed
+			// Defaults to true. When true, the series' updating will be animated with default animation options. The animation can also be a configuration object with properties durationand easing.
+			chart.addSeries(serie, true, false);
+		} 
+	}
+	
+	function resetChartsData(){
+		for (j=0; j<charts.length; j++){
+		   var aChart = (charts[j])['chart'];
+		   if (aChart!=null){
+		   		resetSingleChartData(aChart);
+		   }
+		}
+	}
+	
+	function resetSingleChartData(chart){
+		var series = chart.series;
+		for (i=0;i<series.length;i++){
+			series[i].setData([]);
+		}
+	}
+		
+	function updateData(chart,series_name, value, time){
+		var series = chart.series;
+		var n = series.length;
+		for (index=0; index<n;++index){
+			var serie = series[index];
+			if(serie.name==series_name){
+				//serie.data.push([time,value]);
+				var v = parseFloat(value); 
+				// Value to add to the serie, redraw, shift
+				var shift = time>max_seconds_graphs;
+				// Last arguument: animation
+				serie.addPoint([time,v], false, shift,false);
+				//console.log("Associated with. " + serie.yAxis);
+				//console.log('Added value to ' + serie.name + ', total:' + serie.data.length);
+				break;
+			}
+		}
+	
+	}
+	
+	function changeVariableDialog(var_name){
+		// Modify html structure of dialog
+		// modifyDialog("#var-dialog-modal",var_name);
+		// $( "#var-dialog-modal" ).dialog( "open" );
+		jqmobile_object.changePage( "enter_lab_data.hmtl" );
+	}
+	
+	function modifyDialog(container,var_name){
+		var modified = false;
+		if (experiment_vars!=null){
+			// find the var to change
+			//offset_var = objectFindByKey(experiment_vars,'name','SP_OffsetPosition');
+			the_var = objectFindByKey(experiment_vars,'name',var_name);
+			if (the_var!=null){
+				var new_html = var_name + "(" + the_var.maxRange + "," + 
+							   the_var.minRange + " " + the_var.units + ")<br/>";
+				new_html += "<input type='text' id='value-" + var_name + "' ";
+				new_html += "value='" + the_var.value + "'/><br>";
+				new_html += "<button onclick='changeVarValue(";
+				new_html += '"#value-' + var_name + '","' + var_name + '");'; 
+				new_html += "return false'>Change</button>";	
+				
+				new_html += "<a href='#dialogPage' data-rel='dialog' data-role='button'>Open dialog</a>";	
+					
+				$(container).html(new_html);
+				modified = true;
+			}
+		}
+		return modified;
+	}
+	
+	function showContainer(id){
+		//Ocultamos todo
+		ocultarPanelPrincipal ();
+		
+		
+		$('#graphsPopup').popup("close");
+		$('#webviewsPopup').popup("close");
+		//Mostramos la grafica seleccionada
+		$('#objects_container').find('div[id="' +id+ '"]').show();
+		//Mostramos el webview seleccionado
+		$('#objects_container_views').find('div[id="' +id+ '"]').show();
+
+		showingContainer = id;
+
+		if (showingContainer.indexOf('chart')>=0){
+			
+			index = showingContainer.substring(showingContainer.length-1,showingContainer.length);
+			container_width = $('#'+id).width();
+			container_height = $('#'+id).height();
+			
+			(charts[index])['chart'].setSize(container_width,container_height, true);
+		
+		} else if (showingContainer.indexOf('view')>=0){
+		
+			index = showingContainer.substring(showingContainer.length-1,showingContainer.length);
+		
+			var view_name = showingContainer.toString();
+			
+			// Get the height of iframe doc 
+			var ifrm = document.getElementById(view_name + "_iframe");
+			
+			try{
+			var doc = ifrm.contentDocument? ifrm.contentDocument:ifrm.contentWindow.document;
+			}
+			catch(exception){
+				//capturamos el error, así podemos obtneer el tamaño y se muestra bien en el navegador
+			}
+			doc = doc || document;
+			var body = doc.body, html = doc.documentElement;
+			
+			var height = Math.max( body.scrollHeight, body.offsetHeight, 
+							html.clientHeight, html.scrollHeight, html.offsetHeight );
+			// Set the container height
+			
+			$('#' + view_name + "_iframe").height(height);
+			
+		}
+	}
+	
+	function sessionTimerControl(){
+		// Session timer
+		var now = new Date();
+		// remaining time
+		t1 = now.getTime();
+		t2 =  session_stop_time.getTime();
+		ms_remaining = t2-t1;
+		if (ms_remaining>0){
+			//  Update session_remaining_time
+			if (ms_remaining<60000){
+				if ($('#session_remaining_datetime').hasClass('label-success')){
+					$('#session_remaining_datetime').removeClass('label-success');
+					$('#session_remaining_datetime').addClass('label-warning');
+				}
+				seconds = parseInt(ms_remaining/1000);
+				$('#session_remaining_datetime').html(seconds + " seconds");
+			} else{
+				minutes = parseInt(ms_remaining/60000);
+				seconds = parseInt( (ms_remaining - minutes*60000)/1000);
+				$('#session_remaining_datetime').html(minutes + " minutes, " + seconds + " seconds");
+			}
+		} else {
+			// Session ended
+			$('#session_remaining_datetime').removeClass('label-warning');
+			$('#session_remaining_datetime').addClass('label-danger');
+			$('#session_remaining_datetime').html("Finished");
+			// Finally stop the session timer
+			clearInterval(timerSessionId);
+			// Stop the actual experiment
+			if (running==true){
+				startstopBtnOnclick(null);
+			}
+			// Disable startStopButton
+			$('#startstopBtn').removeClass('btn-success');
+			$('#startstopBtn').addClass('btn-error');
+			$('#startstopBtn').html('Session end');
+			$('#startstopBtn').attr('disabled','disabled');
+			// End session
+			rlab_closeSession(session);
+		}
+		
+	}
+	
+	function rellenarPopupGraphs (lab,experiment){
+		
+	var graphs = getGraphsInfo(lab,experiment);
+		if (typeof graphs === "undefined"){
+			graphs = null;
+		}
+		
+		
+	
+		if (graphs != null){
+			
+		
+			
+			for (var i = 0; i<graphs.length; i++){
+				var container_name = "chart" + i;
+				var tab_title = createGraphTitle((graphs[i])['names']);
+					
+			
+				 
+               
+               $('#graphsPopup').append("<li><a href='#' onclick=\"showContainer('" + container_name + "'); return false;\">" + tab_title + "</a></li>");
+                
+          
+			
+			}
+			
+			$('#graphsPopup').listview();
+			
+		}
+
+	}
+	
+	function rellenarPopupVariables (){
+		$('#variablesListview').empty();
+
+			var ul_ref = " <li><a href='#'>WTModule</a></li> ";
+  
+			$("#variablesListview").append(ul_ref);
+			$('#variablesListview').listview();
+	}
+	
+	function rellenarPopupWebviews (web_views_url,web_views_names,web_views_descriptions){
+			
+		if (web_views_url!=null){
+			for (i=0; i<web_views_url.length; i++){
+				var container_name = "view"+i;
+				
+				$("#webviewsPopup").append("<li><a href='#' onclick=\"showContainer('" + container_name + "'); return false;\"> <i class='fa fa-share'></i> " +
+								web_views_names[i] + "</a></li>");
+			
+				
+			}
+
+		$('#webviewsPopup').listview();
+		}
+	}
+	
+	function ocultarPanelPrincipal (){
+		
+			//Ocultamos todos los views
+		$("#objects_container_views").children().each(function()
+		{
+				$(this).hide();
+		})
+		
+		//Ocultamos todos los charts
+		$("#objects_container").children().each(function()
+		{
+
+				$(this).hide();
+		})
+			
+	}
+	
+</script>
+
+
+</body>
+</html>
